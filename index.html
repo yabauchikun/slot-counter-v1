@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>CZカウンター</title>
+
+<style>
+  body {
+    font-family: sans-serif;
+    background: #a7dff5;
+    color: #222;
+    margin: 0;
+    padding: 20px;
+    box-sizing: border-box;
+  }
+  h1 {
+    text-align: center;
+    margin-bottom: 20px;
+  }
+  .section {
+    margin-bottom: 20px;
+  }
+  .btn {
+    font-size: 1.1em;
+    padding: 8px 14px;
+    margin: 5px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  .pink { background: #f78fb3; }
+  .green { background: #70d6a8; }
+  .purple { background: #9b59b6; }
+  .control { background: #444; color: #fff; }
+
+  .status-container {
+    max-width: 700px;
+    margin: auto;
+  }
+
+  .zone-label {
+    margin: 10px 0 5px;
+  }
+
+  .zone-bar {
+    height: 20px;
+    background: #333;
+    border-radius: 5px;
+    overflow: hidden;
+    width: 100%;
+  }
+
+  .fill {
+    height: 100%;
+    transition: width 0.3s;
+    width: 0%;
+  }
+  .pink-fill { background: #f78fb3; }
+  .green-fill { background: #70d6a8; }
+  .purple-fill { background: #9b59b6; }
+
+  .centered {
+    text-align: center;
+  }
+
+  .button-row, .reset-controls {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 10px;
+  }
+  .stage-btn {
+    margin: 5px;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 6px;
+    background-color: #ccc;
+    cursor: pointer;
+    font-size: 1em;
+  }
+  .stage-btn.active {
+    background-color: #333;
+    color: #fff;
+  }
+</style>
+</head>
+<body>
+
+<h1>CZカウンター</h1>
+
+<div class="section centered">
+  <strong>台選択：</strong>
+  <button onclick="selectSlot(1)">1台目</button>
+  <button onclick="selectSlot(2)">2台目</button>
+  <button onclick="selectSlot(3)">3台目</button>
+  <button onclick="saveSlot()">保存</button>
+  <button onclick="loadSlot()">読み込み</button>
+</div>
+
+<div class="section centered">
+  <strong>ステージ選択：</strong>
+  <div id="stage-buttons">
+    <button class="stage-btn active" data-value="1" data-bg="#a7dff5" data-color="#222">通常</button>
+    <button class="stage-btn" data-value="10" data-bg="#ce5d00" data-color="#fff">夕方</button>
+    <button class="stage-btn" data-value="75" data-bg="#2c3e50" data-color="#fff">夜</button>
+  </div>
+  <label><input type="checkbox" id="copyMode"> にゃんコピ</label>
+</div>
+
+<div class="section button-row">
+  <div>
+    <button class="btn pink" onclick="addPoints('pink')">桃 +</button>
+    <label><input type="checkbox" id="highPink"> ドキドキ高確</label>
+  </div>
+  <div>
+    <button class="btn green" onclick="addPoints('green')">緑 +</button>
+    <label><input type="checkbox" id="highGreen"> ドキドキ高確</label>
+  </div>
+  <div>
+    <button class="btn purple" onclick="addPoints('purple')">紫 +</button>
+    <label><input type="checkbox" id="highPurple"> ドキドキ高確</label>
+  </div>
+</div>
+
+<div class="status-container">
+  <div class="zone-label">桃: <span id="pinkVal">0</span>/150</div>
+  <div class="zone-bar"><div class="fill pink-fill" id="pinkBar"></div></div>
+
+  <div class="zone-label">緑: <span id="greenVal">0</span>/150</div>
+  <div class="zone-bar"><div class="fill green-fill" id="greenBar"></div></div>
+
+  <div class="zone-label">紫: <span id="purpleVal">0</span>/150</div>
+  <div class="zone-bar"><div class="fill purple-fill" id="purpleBar"></div></div>
+</div>
+
+<script>
+let points = { pink: 0, green: 0, purple: 0 };
+let currentSlot = 1;
+let currentStageValue = 1;
+
+function updateUI(color) {
+  document.getElementById(color + "Val").innerText = points[color];
+  let percent = Math.min(points[color] / 150 * 100, 100);
+  document.getElementById(color + "Bar").style.width = percent + "%";
+}
+
+function addPoints(color) {
+  let amount = currentStageValue;
+
+  // 高確チェック
+  if (
+    (color === 'pink' && document.getElementById("highPink").checked) ||
+    (color === 'green' && document.getElementById("highGreen").checked) ||
+    (color === 'purple' && document.getElementById("highPurple").checked)
+  ) {
+    amount += 10;
+  }
+
+  // にゃんコピ倍増
+  if (document.getElementById("copyMode").checked) amount *= 2;
+
+  points[color] += amount;
+
+  // 150を超えたらオーバーフロー分を新たな値にし、アラート
+  if (points[color] >= 150) {
+    alert(color + "チャンスゾーン突入！");
+    points[color] = points[color] - 150;
+  }
+
+  updateUI(color);
+}
+
+function subPoints(color, amount) {
+  points[color] = Math.max(points[color] - amount, 0);
+  updateUI(color);
+}
+
+function resetZone(color) {
+  points[color] = 0;
+  updateUI(color);
+}
+
+function resetAll() {
+  for (let color in points) {
+    points[color] = 0;
+    updateUI(color);
+  }
+}
+
+function selectSlot(n) {
+  currentSlot = n;
+}
+
+function saveSlot() {
+  localStorage.setItem("slot" + currentSlot, JSON.stringify(points));
+  alert("保存しました（" + currentSlot + "台目）");
+}
+
+function loadSlot() {
+  const data = localStorage.getItem("slot" + currentSlot);
+  if (data) {
+    points = JSON.parse(data);
+    updateUI("pink");
+    updateUI("green");
+    updateUI("purple");
+    alert("読み込みました（" + currentSlot + "台目）");
+  } else {
+    alert("保存データがありません");
+  }
+}
+
+const stageButtons = document.querySelectorAll('.stage-btn');
+function updateBackgroundFromButton(button) {
+  const bg = button.getAttribute('data-bg');
+  const color = button.getAttribute('data-color');
+  currentStageValue = parseInt(button.getAttribute('data-value'));
+  document.body.style.background = bg;
+  document.body.style.color = color;
+}
+stageButtons.forEach(btn => {
+  btn.addEventListener('click', () => {
+    stageButtons.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    updateBackgroundFromButton(btn);
+  });
+});
+window.addEventListener('DOMContentLoaded', () => {
+  const activeBtn = document.querySelector('.stage-btn.active');
+  if (activeBtn) updateBackgroundFromButton(activeBtn);
+  updateUI("pink");
+  updateUI("green");
+  updateUI("purple");
+});
+</script>
+
+<style>
+  .toggle-panel {
+    text-align: center;
+    margin-top: 20px;
+  }
+  .hidden-panel {
+    display: none;
+    animation: slideDown 0.3s ease-out forwards;
+  }
+  .show .hidden-panel {
+    display: block;
+  }
+  .toggle-btn {
+    font-size: 1.5em;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #fff;
+    margin-bottom: 10px;
+  }
+  @keyframes slideDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .btn.control.pink { background: #b65f7b; }
+  .btn.control.green { background: #3a8c6c; }
+  .btn.control.purple { background: #6e3e84; }
+  .manual-inputs {
+    margin-top: 20px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 20px;
+  }
+  .manual-input {
+    text-align: center;
+  }
+  .manual-input input {
+    padding: 4px;
+    margin-bottom: 5px;
+    border-radius: 4px;
+    border: 1px solid #aaa;
+    text-align: center;
+    width: 60px;
+  }
+</style>
+
+<div class="toggle-panel">
+  <button class="toggle-btn" onclick="togglePanel()">▼ポイント調整</button>
+  <div id="detailPanel" class="hidden-panel">
+    <div class="manual-inputs">
+      <div class="manual-input">
+        <input type="number" id="pinkInput" min="0" max="150">
+        <div>
+          <button class="btn control pink" onclick="setPoints('pink')">書換</button>
+          <button class="btn control pink" onclick="addCustomPoints('pink')">加算</button>
+          <button class="btn control pink" onclick="subCustomPoints('pink')">減算</button>
+        </div>
+      </div>
+      <div class="manual-input">
+        <input type="number" id="greenInput" min="0" max="150">
+        <div>
+          <button class="btn control green" onclick="setPoints('green')">書換</button>
+          <button class="btn control green" onclick="addCustomPoints('green')">加算</button>
+          <button class="btn control green" onclick="subCustomPoints('green')">減算</button>
+        </div>
+      </div>
+      <div class="manual-input">
+        <input type="number" id="purpleInput" min="0" max="150">
+        <div>
+          <button class="btn control purple" onclick="setPoints('purple')">書換</button>
+          <button class="btn control purple" onclick="addCustomPoints('purple')">加算</button>
+          <button class="btn control purple" onclick="subCustomPoints('purple')">減算</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="reset-controls">
+      <button class="btn control" onclick="resetZone('pink')">桃リセット</button>
+      <button class="btn control" onclick="resetZone('green')">緑リセット</button>
+      <button class="btn control" onclick="resetZone('purple')">紫リセット</button>
+      <button class="btn control" onclick="resetAll()">全体リセット</button>
+    </div>
+  </div>
+</div>
+<script>
+function togglePanel() {
+  const panel = document.getElementById("detailPanel").parentElement;
+  panel.classList.toggle("show");
+}
+
+function setPoints(color) {
+  const inputId = color + "Input";
+  const val = parseInt(document.getElementById(inputId).value, 10);
+  if (!isNaN(val) && val >= 0 && val <= 150) {
+    points[color] = val;
+    updateUI(color);
+  } else {
+    alert("0〜150の数値を入力してください。");
+  }
+}
+
+function addCustomPoints(color) {
+  const inputId = color + "Input";
+  const val = parseInt(document.getElementById(inputId).value, 10);
+  if (!isNaN(val) && val >= 0) {
+    points[color] += val;
+    if (points[color] >= 150) {
+      alert(color + "チャンスゾーン突入！");
+    }
+    updateUI(color);
+  } else {
+    alert("0以上の数値を入力してください。");
+  }
+}
+</script>
+<script>
+function subCustomPoints(color) {
+  const inputId = color + "Input";
+  const val = parseInt(document.getElementById(inputId).value, 10);
+  if (!isNaN(val) && val >= 0) {
+    points[color] = Math.max(points[color] - val, 0);
+    updateUI(color);
+  } else {
+    alert("0以上の数値を入力してください。");
+  }
+}
+</script>
+
+<style>
+  #impurityContainer {
+    text-align: center;
+    margin-top: 40px;
+  }
+  #impurityBarWrapper {
+    margin: 10px auto;
+    max-width: 700px; width: 100%;
+    background: #333;
+    border-radius: 10px;
+    height: 20px;
+    overflow: hidden;
+  }
+  #impurityBar {
+    height: 100%;
+    background: #8884d8;
+    width: 0%;
+    transition: width 0.3s;
+  }
+  .impurity-buttons {
+    margin-top: 10px;
+  }
+  .impurity-buttons button {
+    margin: 5px;
+    padding: 8px 14px;
+    border: none;
+    border-radius: 6px;
+    background: #666;
+    color: #fff;
+    font-size: 1em;
+    cursor: pointer;
+  }
+</style>
+
+
+<div class="toggle-panel">
+  <button class="toggle-btn" onclick="toggleImpurityPanel()">▼穢れポイント</button>
+  <div id="impurityTogglePanel" class="hidden-panel">
+    <div id="impurityContainer">
+  <p>現在の穢れ：<span id="impurityCount">0</span> / 100</p>
+  <div id="impurityBarWrapper">
+    <div id="impurityBar"></div>
+  </div>
+  <p>選択中：<span id="selectedImpurity">1</span></p>
+  <div class="impurity-buttons">
+    <button onclick="selectImpurity(1)">+1</button>
+    <button onclick="selectImpurity(2)">+2</button>
+    <button onclick="selectImpurity(3)">+3</button>
+    <button onclick="selectImpurity(4)">+4</button>
+    <button onclick="selectImpurity(5)">+5</button>
+    <button onclick="selectImpurity(50)">+50</button>
+    <button onclick="selectImpurity(90)">+90</button>
+  </div>
+  <button class="btn control" onclick="addImpurity()">加算する</button>
+  <button class="btn control" onclick="resetImpurity()">リセット</button>
+</div>
+
+<script>
+let impurity = 0;
+let selected = 1;
+
+function selectImpurity(val) {
+  selected = val;
+  document.getElementById("selectedImpurity").innerText = val;
+}
+
+function addImpurity() {
+  impurity = Math.min(impurity + selected, 100);
+  document.getElementById("impurityCount").innerText = impurity;
+  document.getElementById("impurityBar").style.width = impurity + "%";
+}
+
+function resetImpurity() {
+  impurity = 0;
+  document.getElementById("impurityCount").innerText = impurity;
+  document.getElementById("impurityBar").style.width = "0%";
+}
+</script>
+
+
+<style>
+  .toggle-panel {
+    text-align: center;
+    margin-top: 40px;
+  }
+  .hidden-panel {
+    display: none;
+    animation: slideDown 0.3s ease-out forwards;
+  }
+  .show .hidden-panel {
+    display: block;
+  }
+  .toggle-btn {
+    font-size: 1.5em;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #222;
+    margin-bottom: 10px;
+  }
+  @keyframes slideDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+</style>
+
+<script>
+function toggleImpurityPanel() {
+  const panel = document.getElementById("impurityTogglePanel").parentElement;
+  panel.classList.toggle("show");
+}
+</script>
+</html>
